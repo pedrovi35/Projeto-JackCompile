@@ -149,6 +149,6 @@ Jack é uma linguagem orientada a objetos projetada para o projeto Nand to Tetri
 
 <div align="center">
 
-Feito com 💙 por **Pedro Victor** & **Sara Ferreira**
+Feito por **Pedro Victor** & **Sara Ferreira**
 
 </div>
