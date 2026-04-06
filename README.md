@@ -4,8 +4,9 @@
 
 > Implementação de um compilador completo para a linguagem **Jack**, construído do zero — sem geradores automáticos de analisadores léxicos ou sintáticos.
 
-![Status](https://img.shields.io/badge/status-em%20desenvolvimento-yellow?style=for-the-badge)
-![Linguagem](https://img.shields.io/badge/linguagem-Jack-blue?style=for-the-badge)
+![Status](https://img.shields.io/badge/status-Fase%201%20concluída-brightgreen?style=for-the-badge)
+![Linguagem](https://img.shields.io/badge/linguagem-Java-orange?style=for-the-badge&logo=java)
+![Plataforma](https://img.shields.io/badge/plataforma-nand2tetris-blue?style=for-the-badge)
 ![Licença](https://img.shields.io/badge/licen%C3%A7a-MIT-green?style=for-the-badge)
 
 </div>
@@ -37,9 +38,13 @@
 
 ## 🖥️ Linguagem de Implementação
 
-O compilador é escrito inteiramente em **Jack** — a linguagem de alto nível do projeto [Nand to Tetris](https://www.nand2tetris.org/).
+O compilador é escrito em **Java** — linguagem escolhida pela equipe para implementar todas as fases do projeto [Nand to Tetris](https://www.nand2tetris.org/).
 
-Jack é uma linguagem orientada a objetos simples, de tipagem estática, compilada para código de máquina virtual (VM). Toda lógica do compilador — desde a leitura dos caracteres até a geração de código — é implementada manualmente, sem o uso de ferramentas como **Lex**, **Flex** ou **Yacc**.
+A implementação é feita **do zero**, sem o uso de ferramentas como **Lex**, **Flex** ou **Yacc**. Toda lógica — desde a leitura dos caracteres até a geração de código — é desenvolvida manualmente, seguindo a especificação do livro *The Elements of Computing Systems*.
+
+**Requisitos para execução:**
+- Java JDK 21 ou superior
+- Nenhuma biblioteca externa necessária
 
 ---
 
@@ -49,24 +54,51 @@ O compilador é construído em fases progressivas, cada uma representando uma ca
 
 ---
 
-### Fase 1 — 🔤 Analisador Léxico *(Lexical Analysis)*
+### Fase 1 — 🔤 Analisador Léxico *(Lexical Analysis)* ✅
 
-> **Pasta:** `AnalisadorLexico/`
+> **Arquivos:** `JackTokenizer.java`, `JackAnalyzer.java`
+> **Referência Jack:** `AnalisadorLexico/JackTokenizer.jack`, `AnalisadorLexico/Main.jack`
 
 | Arquivo | Descrição |
 |---|---|
-| `JackTokenizer.jack` | Tokenizador completo da linguagem Jack |
-| `Main.jack` | Demonstração do tokenizador em funcionamento |
+| `JackTokenizer.java` | Tokenizador — lê o fonte Jack e classifica cada token |
+| `JackAnalyzer.java` | Programa principal — lê arquivos `.jack` e gera `.xml` |
+| `compilar.bat` | Script Windows para compilar o projeto |
+| `executar.bat` | Script Windows para executar o analisador |
+| `AnalisadorLexico/JackTokenizer.jack` | Versão conceitual do tokenizador em Jack |
+| `AnalisadorLexico/Main.jack` | Demonstração do tokenizador em Jack |
 
 **O que faz:**
 - Varre o código-fonte caractere a caractere
-- Descarta espaços em branco e comentários (`//` e `/* */`)
+- Descarta espaços em branco, tabs e quebras de linha
+- Descarta comentários de linha (`//`) e de bloco (`/* */` e `/** */`)
 - Agrupa os caracteres restantes em **tokens**:
-  - `KEYWORD` — palavras reservadas (`class`, `while`, `return` …)
-  - `SYMBOL` — símbolos e operadores (`{ } ( ) + - * = …`)
-  - `IDENTIFIER` — nomes de variáveis e classes
-  - `INT_CONST` — constantes inteiras (`0` a `32767`)
-  - `STRING_CONST` — constantes string (`"texto"`)
+  - `keyword` — palavras reservadas (`class`, `while`, `return` …)
+  - `symbol` — símbolos e operadores (`{ } ( ) + - * = …`)
+  - `identifier` — nomes de variáveis e classes
+  - `integerConstant` — constantes inteiras (`0` a `32767`)
+  - `stringConstant` — constantes string (`"texto"`)
+
+**Saída XML gerada:**
+
+```xml
+<tokens>
+<keyword> class </keyword>
+<identifier> Main </identifier>
+<symbol> { </symbol>
+<keyword> function </keyword>
+<keyword> void </keyword>
+<identifier> main </identifier>
+<symbol> ( </symbol>
+<symbol> ) </symbol>
+<symbol> { </symbol>
+<symbol> } </symbol>
+<symbol> } </symbol>
+</tokens>
+```
+
+> **Caracteres especiais** são escapados automaticamente:
+> `&` → `&amp;` | `<` → `&lt;` | `>` → `&gt;` | `"` → `&quot;`
 
 ---
 
@@ -112,9 +144,14 @@ O compilador é construído em fases progressivas, cada uma representando uma ca
 ## 📁 Estrutura de Pastas
 
 ```
-compiladores/
+Projeto-JackCompile/
 │
-├── AnalisadorLexico/          ✅ Fase 1 — Concluída
+├── JackTokenizer.java         ✅ Tokenizador (Fase 1)
+├── JackAnalyzer.java          ✅ Programa principal (Fase 1)
+├── compilar.bat               ✅ Script de compilação (Windows)
+├── executar.bat               ✅ Script de execução (Windows)
+│
+├── AnalisadorLexico/          ✅ Referência conceitual em Jack
 │   ├── JackTokenizer.jack
 │   └── Main.jack
 │
@@ -129,10 +166,54 @@ compiladores/
 
 ## ▶️ Como Executar
 
-1. Abra o **VM Emulator** ou o **Jack Compiler** do Nand to Tetris
-2. Navegue até a pasta da fase desejada (ex.: `AnalisadorLexico/`)
-3. Compile os arquivos `.jack` com o compilador Jack
-4. Execute o programa no emulador e acompanhe a saída na tela
+### Pré-requisito
+Instale o **Java JDK 21+**: https://adoptium.net
+
+### 1. Compilar o projeto
+
+**Via script (Windows):**
+```bash
+compilar.bat
+```
+
+**Manualmente:**
+```bash
+javac JackTokenizer.java JackAnalyzer.java
+```
+
+### 2. Executar o analisador
+
+**Via script (Windows):**
+```bash
+executar.bat caminho\para\arquivo.jack
+executar.bat caminho\para\diretorio\
+```
+
+**Manualmente:**
+```bash
+# Um único arquivo
+java JackAnalyzer Square\Main.jack
+
+# Um diretório inteiro (processa todos os .jack)
+java JackAnalyzer Square\
+```
+
+### 3. Verificar a saída
+
+Para cada `NomeArquivo.jack` será gerado `NomeArquivoT.xml` na mesma pasta:
+
+```
+Square\Main.jack        →  Square\MainT.xml
+Square\Square.jack      →  Square\SquareT.xml
+Square\SquareGame.jack  →  Square\SquareGameT.xml
+```
+
+### 4. Validar com o nand2tetris
+
+Use o **TextComparer** do kit do curso para comparar a saída com os arquivos oficiais:
+```
+tools\TextComparer.bat Square\MainT.xml Square\MainT_corrigido.xml
+```
 
 ---
 
@@ -144,6 +225,10 @@ Jack é uma linguagem orientada a objetos projetada para o projeto Nand to Tetri
 - Orientação a objetos com `class`, `constructor`, `method` e `function`
 - Controle de fluxo com `if`, `else`, `while`
 - Sem herança ou sobrecarga — simples e educacional por design
+
+**Palavras reservadas:** `class` `constructor` `function` `method` `field` `static` `var` `int` `char` `boolean` `void` `true` `false` `null` `this` `let` `do` `if` `else` `while` `return`
+
+**Símbolos:** `{ } ( ) [ ] . , ; + - * / & | < > = ~`
 
 ---
 
