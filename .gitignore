@@ -1,8 +1,6 @@
 # Arquivos compilados Java
 *.class
 
-# Saída gerada pelo analisador
-*T.xml
 
 # IDEs
 .idea/
