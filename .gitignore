@@ -1,0 +1,15 @@
+# Arquivos compilados Java
+*.class
+
+# Saída gerada pelo analisador
+*T.xml
+
+# IDEs
+.idea/
+*.iml
+.vscode/
+*.code-workspace
+
+# Sistema
+.DS_Store
+Thumbs.db
