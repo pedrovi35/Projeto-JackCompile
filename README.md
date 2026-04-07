@@ -20,6 +20,7 @@
     <tr>
       <th>Nome</th>
       <th>GitHub</th>
+      <Matrícula</th>
     </tr>
   </thead>
   <tbody>
