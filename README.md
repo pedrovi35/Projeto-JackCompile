@@ -20,17 +20,19 @@
     <tr>
       <th>Nome</th>
       <th>GitHub</th>
-      <Matrícula</th>
+      <th>Matrícula</th>
     </tr>
   </thead>
   <tbody>
     <tr>
       <td>🧑‍💻 Pedro Victor Rocha Gonçalves</td>
       <td><a href="https://github.com/pedrovi35">@pedrovi35</a></td>
+      <td>2022029920</td>
     </tr>
     <tr>
       <td>👩‍💻 Sara Ferreira</td>
       <td><a href="https://github.com/SaraFerreira42">@SaraFerreira42</a></td>
+      <td>2022029911</td>
     </tr>
   </tbody>
 </table>
