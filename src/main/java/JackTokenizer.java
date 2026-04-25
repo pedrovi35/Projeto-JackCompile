@@ -207,4 +207,7 @@ public class JackTokenizer {
                        ? TokenType.KEYWORD
                        : TokenType.IDENTIFIER;
     }
+    public String currentTokenValue() {
+        return currentToken;
+    }
 }
