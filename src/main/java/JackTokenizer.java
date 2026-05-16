@@ -1,24 +1,14 @@
 import java.util.Set;
 
 /**
- * JackTokenizer
+ * Lexical analyser for the Jack language (nand2tetris).
  *
- * Analisador léxico para a linguagem Jack (nand2tetris).
- * Varre o código-fonte caractere a caractere, descartando
- * espaços, comentários e agrupando os tokens.
+ * Scans source text character-by-character and produces {@link Token} objects.
+ * Each token carries its type, lexeme, and the source line where it appeared,
+ * so the rest of the compiler can emit helpful error messages.
  */
 public class JackTokenizer {
 
-    // -------------------------------------------------------
-    // Tipos de token
-    // -------------------------------------------------------
-    public enum TokenType {
-        KEYWORD, SYMBOL, IDENTIFIER, INT_CONST, STRING_CONST
-    }
-
-    // -------------------------------------------------------
-    // Palavras reservadas da linguagem Jack
-    // -------------------------------------------------------
     private static final Set<String> KEYWORDS = Set.of(
         "class", "constructor", "function", "method", "field", "static",
         "var", "int", "char", "boolean", "void",
@@ -26,188 +16,133 @@ public class JackTokenizer {
         "let", "do", "if", "else", "while", "return"
     );
 
-    // -------------------------------------------------------
-    // Símbolos válidos da linguagem Jack
-    // -------------------------------------------------------
     private static final Set<Character> SYMBOLS = Set.of(
         '{', '}', '(', ')', '[', ']', '.', ',', ';',
         '+', '-', '*', '/', '&', '|', '<', '>', '=', '~'
     );
 
-    // -------------------------------------------------------
-    // Estado interno
-    // -------------------------------------------------------
-    private final String source;   // código-fonte completo
-    private int pos;               // posição atual de leitura
-    private final int len;         // comprimento do fonte
+    private final String source;
+    private final int    len;
+    private int pos         = 0;
+    private int currentLine = 1;
 
-    private TokenType currentType;
-    private String    currentToken;  // lexema bruto
-    private int       currentInt;
+    private Token current;
 
-    // -------------------------------------------------------
-    // Construtor
-    // -------------------------------------------------------
     public JackTokenizer(String source) {
-        this.source       = source;
-        this.len          = source.length();
-        this.pos          = 0;
-        this.currentType  = null;
-        this.currentToken = null;
-        this.currentInt   = 0;
+        this.source = source;
+        this.len    = source.length();
     }
 
     // -------------------------------------------------------
-    // API pública
+    // Public API
     // -------------------------------------------------------
 
-    /** Retorna true enquanto houver tokens não lidos. */
     public boolean hasMoreTokens() {
-        int savedPos = pos;
+        int savedPos  = pos;
+        int savedLine = currentLine;
         skipWhitespaceAndComments();
         boolean result = pos < len;
-        pos = savedPos;
+        pos         = savedPos;
+        currentLine = savedLine;
         return result;
     }
 
-    /**
-     * Avança para o próximo token.
-     * Deve ser chamado apenas se hasMoreTokens() == true.
-     */
     public void advance() {
         skipWhitespaceAndComments();
         if (pos >= len) return;
 
+        int tokenLine = currentLine;
         char c = source.charAt(pos);
 
-        if (c == '"') {
-            readString();
-        } else if (Character.isDigit(c)) {
-            readInt();
-        } else if (SYMBOLS.contains(c)) {
-            readSymbol();
-        } else if (Character.isLetter(c) || c == '_') {
-            readIdentifierOrKeyword();
-        } else {
-            // Caractere inválido – ignora
-            pos++;
-        }
+        if      (c == '"')                          readString(tokenLine);
+        else if (Character.isDigit(c))              readInt(tokenLine);
+        else if (SYMBOLS.contains(c))               readSymbol(tokenLine);
+        else if (Character.isLetter(c) || c == '_') readIdentifierOrKeyword(tokenLine);
+        else                                        pos++; // skip invalid character
     }
 
-    /** Tipo do token corrente. */
-    public TokenType tokenType() { return currentType; }
-
-    /** Keyword do token corrente (somente quando KEYWORD). */
-    public String keyword() { return currentToken; }
-
-    /** Símbolo do token corrente (somente quando SYMBOL). */
-    public char symbol() { return currentToken.charAt(0); }
-
-    /** Identificador do token corrente (somente quando IDENTIFIER). */
-    public String identifier() { return currentToken; }
-
-    /** Valor inteiro do token corrente (somente quando INT_CONST). */
-    public int intVal() { return currentInt; }
-
-    /** Valor string do token corrente sem aspas (somente quando STRING_CONST). */
-    public String stringVal() { return currentToken; }
+    /** Returns the most recently produced token. */
+    public Token current() { return current; }
 
     // -------------------------------------------------------
-    // Métodos privados de leitura
+    // Backward-compatible accessors (delegate to current token)
+    // -------------------------------------------------------
+
+    public Token.Type tokenType()       { return current.getType();   }
+    public String     keyword()         { return current.getLexeme(); }
+    public char       symbol()          { return current.asSymbol();  }
+    public String     identifier()      { return current.getLexeme(); }
+    public int        intVal()          { return current.asInt();     }
+    public String     stringVal()       { return current.getLexeme(); }
+    public String     currentTokenValue() { return current.getLexeme(); }
+    public int        currentLine()     { return current != null ? current.getLine() : currentLine; }
+
+    // -------------------------------------------------------
+    // Private scanning helpers
     // -------------------------------------------------------
 
     private void skipWhitespaceAndComments() {
         while (pos < len) {
             char c = source.charAt(pos);
 
-            // Espaços em branco
-            if (c == ' ' || c == '\t' || c == '\n' || c == '\r') {
-                pos++;
-                continue;
-            }
+            if (c == '\n') { currentLine++; pos++; continue; }
+            if (c == ' ' || c == '\t' || c == '\r') { pos++; continue; }
 
-            // Possível início de comentário
             if (c == '/' && pos + 1 < len) {
                 char next = source.charAt(pos + 1);
-
-                if (next == '/') {
-                    // Comentário de linha
-                    skipLineComment();
-                    continue;
-                }
-                if (next == '*') {
-                    // Comentário de bloco /** ou /* */
-                    skipBlockComment();
-                    continue;
-                }
+                if (next == '/') { skipLineComment();  continue; }
+                if (next == '*') { skipBlockComment(); continue; }
             }
-
-            break; // caractere válido
+            break;
         }
     }
 
     private void skipLineComment() {
-        pos += 2; // pula "//"
-        while (pos < len && source.charAt(pos) != '\n') {
-            pos++;
-        }
+        pos += 2;
+        while (pos < len && source.charAt(pos) != '\n') pos++;
     }
 
     private void skipBlockComment() {
-        pos += 2; // pula "/*"
+        pos += 2;
         while (pos + 1 < len) {
-            if (source.charAt(pos) == '*' && source.charAt(pos + 1) == '/') {
-                pos += 2;
-                return;
-            }
+            if (source.charAt(pos) == '\n') currentLine++;
+            if (source.charAt(pos) == '*' && source.charAt(pos + 1) == '/') { pos += 2; return; }
             pos++;
         }
-        pos = len; // EOF dentro de comentário
+        pos = len;
     }
 
-    private void readString() {
-        pos++; // pula aspa de abertura
+    private void readString(int line) {
+        pos++; // skip opening quote
         StringBuilder sb = new StringBuilder();
         while (pos < len && source.charAt(pos) != '"') {
-            sb.append(source.charAt(pos));
-            pos++;
+            if (source.charAt(pos) == '\n') currentLine++;
+            sb.append(source.charAt(pos++));
         }
-        if (pos < len) pos++; // pula aspa de fechamento
-        currentToken = sb.toString();
-        currentType  = TokenType.STRING_CONST;
+        if (pos < len) pos++; // skip closing quote
+        current = new Token(Token.Type.STRING_CONST, sb.toString(), line);
     }
 
-    private void readInt() {
+    private void readInt(int line) {
         StringBuilder sb = new StringBuilder();
-        while (pos < len && Character.isDigit(source.charAt(pos))) {
-            sb.append(source.charAt(pos));
-            pos++;
-        }
-        currentToken = sb.toString();
-        currentInt   = Integer.parseInt(currentToken);
-        currentType  = TokenType.INT_CONST;
+        while (pos < len && Character.isDigit(source.charAt(pos)))
+            sb.append(source.charAt(pos++));
+        current = new Token(Token.Type.INT_CONST, sb.toString(), line);
     }
 
-    private void readSymbol() {
-        currentToken = String.valueOf(source.charAt(pos));
-        currentType  = TokenType.SYMBOL;
-        pos++;
+    private void readSymbol(int line) {
+        current = new Token(Token.Type.SYMBOL, String.valueOf(source.charAt(pos++)), line);
     }
 
-    private void readIdentifierOrKeyword() {
+    private void readIdentifierOrKeyword(int line) {
         StringBuilder sb = new StringBuilder();
         while (pos < len) {
             char c = source.charAt(pos);
             if (!Character.isLetterOrDigit(c) && c != '_') break;
-            sb.append(c);
-            pos++;
+            sb.append(c); pos++;
         }
-        currentToken = sb.toString();
-        currentType  = KEYWORDS.contains(currentToken)
-                       ? TokenType.KEYWORD
-                       : TokenType.IDENTIFIER;
-    }
-    public String currentTokenValue() {
-        return currentToken;
+        String lexeme = sb.toString();
+        Token.Type type = KEYWORDS.contains(lexeme) ? Token.Type.KEYWORD : Token.Type.IDENTIFIER;
+        current = new Token(type, lexeme, line);
     }
 }
